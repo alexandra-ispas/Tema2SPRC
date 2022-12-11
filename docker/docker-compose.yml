@@ -1,13 +1,60 @@
-version: '3.1'
+version: '3.8'
 
 services:
-  db:
+  server:
+    image: sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    networks:
+      - fullstack
+    volumes:
+      - ..:/root/tema2
+
+  postgres:
     image: postgres
+    container_name: tema2
     restart: always
     volumes:
-      - "./sql:/docker-entrypoint-initdb.d"
+      - postgres:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
     environment:
-      - "POSTGRES_USER=docker"
-      - "POSTGRES_PASSWORD=docker"
+      - POSTGRES_USER=sprc
+      - POSTGRES_PASSWORD=sprc
+      - POSTGRES_DB=sprc
     ports:
       - "5432:5432"
+    networks:
+      - fullstack
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: sprc@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: sprc
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    ports:
+      - "5050:80"
+    networks:
+      - fullstack
+    restart: unless-stopped
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+volumes:
+  postgres:
+    driver: local
+  pgadmin-data:
+  server:
+    driver: local
+
+networks:
+  fullstack:
+    driver: bridge

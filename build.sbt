@@ -51,8 +51,10 @@ lazy val root = (project in file("."))
       // Logs
       "ch.qos.logback" % "logback-classic" % logbackVersion,
 
+
       // Test libs
       "org.scalatest" %% "scalatest" % scalaTestVersion % "it,test",
-      "org.scalamock" %% "scalamock" % scalaMockVersion % "test"
+      "org.scalamock" %% "scalamock" % scalaMockVersion % "test",
     )
   )
+
