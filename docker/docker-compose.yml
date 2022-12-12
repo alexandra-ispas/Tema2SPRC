@@ -1,20 +1,22 @@
 version: '3.8'
 
 services:
-#  server:
-#    image: sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0
-#    command:
-#      sbt run
-#    ports:
-#      - "6000:6000"
-#    depends_on:
-#      - postgres
-#    links:
-#      - postgres
-#    networks:
-#      - network-api
-#    volumes:
-#      - ..:/root/
+  server:
+    image: sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0
+    build: .
+    command:
+      sbt run
+    ports:
+      - "6000:6000"
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    networks:
+      - network-api
+    volumes:
+      - ../build.sbt:/root/build.sbt
+      - ../src:/root/src/
 
   postgres:
     image: postgres
@@ -22,11 +24,8 @@ services:
     restart: always
     volumes:
       - postgres:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d
-    environment:
-      - POSTGRES_USER=sprc
-      - POSTGRES_PASSWORD=sprc
-      - POSTGRES_DB=sprc
+      - ../sql:/docker-entrypoint-initdb.d
+    env_file: global-variables.env
     ports:
       - "5432:5432"
     networks:
@@ -36,9 +35,7 @@ services:
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin_container
-    environment:
-      PGADMIN_DEFAULT_EMAIL: sprc@gmail.com
-      PGADMIN_DEFAULT_PASSWORD: sprc
+    env_file: global-variables.env
     depends_on:
       - postgres
     links:

@@ -1,0 +1,9 @@
+docker/
+.idea/
+.bsp/
+target/
+.bash_history
+project/
+sql/
+postman/
+.gitignore

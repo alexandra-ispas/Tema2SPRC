@@ -27,13 +27,23 @@ package object model {
     id: Option[Int],
     valoare: Option[Double],
     timestamp: Option[Timestamp],
-    idoras: Option[Int]
+    idOras: Option[Int]
+  ) extends Entity
+
+  case class TemperatureResponse(
+    id: Option[Int],
+    valoare: Option[Double],
+    timestamp: Option[Timestamp]
   ) extends Entity
 
   val errorCity: City = City(None, None, None, None, None)
   val errorCountry: Country = Country(None, None, None, None)
   val errorTemperature: Temperature = Temperature(None, None, None, None)
 
-  case object EntryNotFoundError
   case class IDResponse(id: Int)
+
+  val CITIES = "cities"
+  val COUNTRIES = "countries"
+  val COUNTRY = "country"
+
 }

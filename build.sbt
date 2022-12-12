@@ -1,5 +1,5 @@
 lazy val commonSettings = Seq(
-  name := "todo-api",
+  name := "Tema2sprc",
   version := "1.0-SNAPSHOT",
   scalaVersion := "2.13.8",
   organization := "org.example.todo",
@@ -49,11 +49,6 @@ lazy val root = (project in file("."))
       "org.http4s" %% "http4s-prometheus-metrics" % http4sVersion,
 
       // Logs
-      "ch.qos.logback" % "logback-classic" % logbackVersion,
-
-
-      // Test libs
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "it,test",
-      "org.scalamock" %% "scalamock" % scalaMockVersion % "test",
+      "ch.qos.logback" % "logback-classic" % logbackVersion
     )
   )

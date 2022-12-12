@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import doobie._
 import doobie.implicits._
 import doobie.postgres.sqlstate.class23.FOREIGN_KEY_VIOLATION
-import org.example.sprc.model.{Country, EntryNotFoundError}
+import org.example.sprc.model.Country
 
 class CountryDao(transactor: Transactor[IO]) {
 
@@ -15,16 +15,16 @@ class CountryDao(transactor: Transactor[IO]) {
       .stream
       .transact(transactor)
 
-  def getCountry(id: Int): IO[Either[EntryNotFoundError.type, Country]] = {
+  def getCountry(id: Int): Either[SqlState, Country] =
     sql"SELECT id, nume, lat, lon FROM tari WHERE id = $id"
       .query[Country]
       .option
       .transact(transactor)
+      .attemptSql
       .map {
-        case Some(todo) => Right(todo)
-        case None       => Left(EntryNotFoundError)
-      }
-  }
+        case Left(exception) => Left(SqlState(exception.getSQLState))
+        case Right(country) => Right(country.get)
+      }.unsafeRunSync()
 
   def createCountry(country: Country): Either[SqlState, Country] = {
     sql"INSERT INTO tari (nume, lat, lon) VALUES (${country.nume}, ${country.lat},  ${country.lon})"
@@ -38,12 +38,14 @@ class CountryDao(transactor: Transactor[IO]) {
       }.unsafeRunSync()
   }
 
-  def deleteCountry(id: Int): IO[Either[EntryNotFoundError.type, Unit]] = {
-    sql"DELETE FROM tari WHERE id = $id".update.run.transact(transactor).map {
-      affectedRowsNr =>
-        if (affectedRowsNr == 1) Right(())
-        else Left(EntryNotFoundError)
-    }
+  def deleteCountry(id: Int): Either[SqlState, Int] = {
+    sql"DELETE FROM tari WHERE id = $id".update.run
+      .transact(transactor)
+      .attemptSql
+      .map {
+        case Left(exception) => Left(SqlState(exception.getSQLState))
+        case Right(x) => Right(x)
+      }.unsafeRunSync()
   }
 
   def updateCountry(
