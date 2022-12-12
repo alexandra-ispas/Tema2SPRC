@@ -1,13 +1,39 @@
 package org.example.sprc
 
+import java.sql.Timestamp
+
 package object model {
 
-  case class Country(id: Option[Int], nume: String, lat: Double, lon: Double)
-  case class City(id: Option[Int], idTara: Int, nume: String, lat: Double, lon: Double)
-  case class Temperature(id: Option[Int], idOras: Int, valoare: Double, timestamp: Option[String])
+  sealed trait Entity {
+    def id: Option[Int]
+  }
+
+  case class Country(
+    id: Option[Int],
+    nume: Option[String],
+    lat: Option[Double],
+    lon: Option[Double]
+  ) extends Entity
+
+  case class City(
+   id: Option[Int],
+   idTara: Option[Int],
+   nume: Option[String],
+   lat: Option[Double],
+   lon: Option[Double]
+  ) extends Entity
+
+  case class Temperature(
+    id: Option[Int],
+    valoare: Option[Double],
+    timestamp: Option[Timestamp],
+    idoras: Option[Int]
+  ) extends Entity
+
+  val errorCity: City = City(None, None, None, None, None)
+  val errorCountry: Country = Country(None, None, None, None)
+  val errorTemperature: Temperature = Temperature(None, None, None, None)
 
   case object EntryNotFoundError
-  case object UniqueKeyAlreadyExists
-
   case class IDResponse(id: Int)
 }

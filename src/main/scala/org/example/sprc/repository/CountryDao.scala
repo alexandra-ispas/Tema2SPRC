@@ -1,12 +1,11 @@
 package org.example.sprc.repository
 
 import cats.effect._
+import cats.effect.unsafe.implicits.global
 import doobie._
 import doobie.implicits._
-import doobie.postgres.sqlstate
-import doobie.postgres.sqlstate.class23.UNIQUE_VIOLATION
-import org.example.sprc.model.{Country, EntryNotFoundError, UniqueKeyAlreadyExists}
-import org.postgresql.util.PSQLException
+import doobie.postgres.sqlstate.class23.FOREIGN_KEY_VIOLATION
+import org.example.sprc.model.{Country, EntryNotFoundError}
 
 class CountryDao(transactor: Transactor[IO]) {
 
@@ -27,7 +26,7 @@ class CountryDao(transactor: Transactor[IO]) {
       }
   }
 
-  def createCountry(country: Country): IO[Either[SqlState, Country]] = {
+  def createCountry(country: Country): Either[SqlState, Country] = {
     sql"INSERT INTO tari (nume, lat, lon) VALUES (${country.nume}, ${country.lat},  ${country.lon})"
       .update
       .withUniqueGeneratedKeys[Int]("id")
@@ -36,7 +35,7 @@ class CountryDao(transactor: Transactor[IO]) {
       .map {
         case Left(exception) => Left(SqlState(exception.getSQLState))
         case Right(id) => Right(country.copy(id = Some(id)))
-      }
+      }.unsafeRunSync()
   }
 
   def deleteCountry(id: Int): IO[Either[EntryNotFoundError.type, Unit]] = {
@@ -50,14 +49,15 @@ class CountryDao(transactor: Transactor[IO]) {
   def updateCountry(
       id: Int,
       country: Country
-  ): IO[Either[EntryNotFoundError.type, Country]] = {
+  ): Either[SqlState, Country] = {
     sql"UPDATE tari SET nume = ${country.nume}, lat = ${country.lat}, lon = ${country.lon} where id=$id".update.run
       .transact(transactor)
-      .map { affectedRowsNr =>
-        if (affectedRowsNr == 1)
-          Right(country.copy(id = Option(id)))
-        else Left(EntryNotFoundError)
-      }
+      .attemptSql
+      .map {
+        case Left(exception) => Left(SqlState(exception.getSQLState))
+        case Right(id) if id > 0 => Right(country.copy(id = Some(id)))
+        case Right(_) => Left(FOREIGN_KEY_VIOLATION)
+      }.unsafeRunSync()
   }
 
 }

@@ -1,18 +1,20 @@
 version: '3.8'
 
 services:
-  server:
-    image: sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-    links:
-      - postgres
-    networks:
-      - fullstack
-    volumes:
-      - ..:/root/tema2
+#  server:
+#    image: sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0
+#    command:
+#      sbt run
+#    ports:
+#      - "6000:6000"
+#    depends_on:
+#      - postgres
+#    links:
+#      - postgres
+#    networks:
+#      - network-api
+#    volumes:
+#      - ..:/root/
 
   postgres:
     image: postgres
@@ -28,7 +30,8 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - fullstack
+      - network-api
+      - network-gui
 
   pgadmin:
     image: dpage/pgadmin4
@@ -43,7 +46,7 @@ services:
     ports:
       - "5050:80"
     networks:
-      - fullstack
+      - network-gui
     restart: unless-stopped
     volumes:
       - pgadmin-data:/var/lib/pgadmin
@@ -56,5 +59,7 @@ volumes:
     driver: local
 
 networks:
-  fullstack:
-    driver: bridge
+  network-api:
+    name: network-api
+  network-gui:
+    name: network-gui

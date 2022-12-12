@@ -57,4 +57,3 @@ lazy val root = (project in file("."))
       "org.scalamock" %% "scalamock" % scalaMockVersion % "test",
     )
   )
-

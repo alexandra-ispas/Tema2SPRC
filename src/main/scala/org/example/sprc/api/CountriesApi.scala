@@ -2,16 +2,16 @@ package org.example.sprc.api
 
 import cats.effect.IO
 import doobie.enumerated.SqlState
-import doobie.postgres.sqlstate.class23.UNIQUE_VIOLATION
+import doobie.postgres.sqlstate.class23._
 import io.circe.generic.auto._
 import io.circe.syntax._
-import org.example.sprc.model.{Country, EntryNotFoundError, IDResponse}
+import org.example.sprc.model._
 import org.example.sprc.service.CountryService
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.`Content-Type`
-import org.http4s.{HttpRoutes, MediaType, Response}
+import org.http4s.{HttpRoutes, MediaType, Request, Response}
 
 class CountriesApi(countryService: CountryService) extends Http4sDsl[IO] {
 
@@ -22,40 +22,42 @@ class CountriesApi(countryService: CountryService) extends Http4sDsl[IO] {
     case GET -> Root / IntVar(id) =>
       for {
         result <- countryService.getCountry(id)
-        response <- countryResult(result)
+        response <- getResult(result)
       } yield response
 
     case req @ POST -> Root =>
       for {
-        country <- req.decodeJson[Country]
-        createdTodo <- countryService.addCountry(country)
-        response <- putResult(createdTodo)
+        country <- extractCountryRequest(req)
+        createdCountry = countryService.addCountry(country)
+        response <- putResult("put", createdCountry)
       } yield response
-
 
     case req @ PUT -> Root / IntVar(id) =>
       for {
-        country <- req.decodeJson[Country]
-        updatedResponse <- countryService.updateCountry(id, country)
-        response <- countryResult(updatedResponse)
+        country <- extractCountryRequest(req)
+        updatedResponse = countryService.updateCountry(id, country)
+        response <- putResult("update", updatedResponse)
       } yield response
 
     case DELETE -> Root / IntVar(id) =>
       countryService.deleteCountry(id).flatMap {
         case Left(EntryNotFoundError) => NotFound()
-        case Right(_)                 => NoContent()
+        case Right(_)                 => Ok()
       }
   }
 
+  // todo: make this generic
   private def putResult(
+     opType: String,
      country: Either[SqlState, Country]
   ): IO[Response[IO]] = country match {
-    case Right(country) => Created(IDResponse(country.id.get).asJson, `Content-Type`(MediaType.application.json))
+    case Right(country) if opType == "put" => Created(IDResponse(country.id.get).asJson, `Content-Type`(MediaType.application.json))
+    case Right(country) => Ok(country.asJson, `Content-Type`(MediaType.application.json))
     case Left(UNIQUE_VIOLATION) => Conflict()
     case Left(_) => BadRequest()
   }
 
-  private def countryResult(
+  private def getResult(
     result: Either[EntryNotFoundError.type, Country]
   ): IO[Response[IO]] = {
     result match {
@@ -63,5 +65,11 @@ class CountriesApi(countryService: CountryService) extends Http4sDsl[IO] {
       case Right(country)           => Ok(country.asJson)
     }
   }
+
+  private def extractCountryRequest(req: Request[IO]): IO[Country] =
+    req.decodeJson[Country].attempt.map {
+      case Left(_) => errorCountry
+      case Right(value) => value
+    }
 
 }

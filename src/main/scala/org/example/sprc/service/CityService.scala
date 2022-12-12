@@ -3,6 +3,7 @@ package org.example.sprc.service
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import doobie.enumerated.SqlState
+import doobie.postgres.sqlstate.class22.INVALID_PARAMETER_VALUE
 import org.example.sprc.model.{City, EntryNotFoundError}
 import org.example.sprc.repository.CityDao
 
@@ -19,11 +20,17 @@ class CityService(dao: CityDao) {
   def deleteCity(id: Int): IO[Either[EntryNotFoundError.type, Unit]] =
     dao.deleteCity(id)
 
-  def addCity(city: City): IO[Either[SqlState, City]] = dao.createCity(city)
+  def addCity(city: City): Either[SqlState, City] =
+    if (city.idTara.isEmpty || city.nume.isEmpty || city.lat.isEmpty || city.lon.isEmpty)
+      Left(INVALID_PARAMETER_VALUE)
+    else dao.createCity(city)
 
   def updateCity(
       id: Int,
       city: City
-  ): IO[Either[EntryNotFoundError.type, City]] = dao.updateCity(id, city)
+  ): Either[SqlState, City] =
+    if (city.idTara.isEmpty || city.nume.isEmpty || city.lat.isEmpty || city.lon.isEmpty)
+      Left(INVALID_PARAMETER_VALUE)
+    else dao.updateCity(id, city)
 
 }

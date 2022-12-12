@@ -2,10 +2,10 @@ package org.example.sprc.api
 
 import cats.effect.IO
 import doobie.enumerated.SqlState
-import doobie.postgres.sqlstate.class23.UNIQUE_VIOLATION
+import doobie.postgres.sqlstate.class23.{CHECK_VIOLATION, FOREIGN_KEY_VIOLATION, UNIQUE_VIOLATION}
 import io.circe.generic.auto._
 import io.circe.syntax._
-import org.example.sprc.model.{City, Country, EntryNotFoundError, IDResponse}
+import org.example.sprc.model.{City, Country, EntryNotFoundError, IDResponse, errorCity}
 import org.example.sprc.service.CityService
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe._
@@ -29,23 +29,33 @@ class CityApi(cityService: CityService) extends Http4sDsl[IO] {
       Ok(cityService.getCitiesByCountry(idTara), `Content-Type`(MediaType.application.json))
 
     case req @ POST -> Root =>
+      val city = req.decodeJson[City].attempt.map {
+        case Left(_) => errorCity
+        case Right(value) => value
+      }
+
       for {
-        city <- req.decodeJson[City]
-        createdTodo <- cityService.addCity(city)
-        response <- putResult(createdTodo)
+        c <- city
+        createdTodo = cityService.addCity(c)
+        response <- putResult("put", createdTodo)
       } yield response
 
     case req @ PUT -> Root / IntVar(id) =>
+      val city = req.decodeJson[City].attempt.map {
+        case Left(_) => errorCity
+        case Right(value) => value
+      }
+
       for {
-        city <- req.decodeJson[City]
-        updatedResponse <- cityService.updateCity(id, city)
-        response <- cityResult(updatedResponse)
+        c <- city
+        updatedResponse = cityService.updateCity(id, c)
+        response <- putResult("update", updatedResponse)
       } yield response
 
     case DELETE -> Root / IntVar(id) =>
       cityService.deleteCity(id).flatMap {
         case Left(EntryNotFoundError) => NotFound()
-        case Right(_)                => NoContent()
+        case Right(_)                 => Ok()
       }
     }
 
@@ -54,15 +64,19 @@ class CityApi(cityService: CityService) extends Http4sDsl[IO] {
   ): IO[Response[IO]] = {
     result match {
       case Left(EntryNotFoundError) => NotFound()
-      case Right(city)             => Ok(city.asJson)
+      case Right(city)              => Ok(city.asJson)
     }
   }
 
   private def putResult(
+    opType: String,
    city: Either[SqlState, City]
  ): IO[Response[IO]] = city match {
-    case Right(city) => Created(IDResponse(city.id.get).asJson, `Content-Type`(MediaType.application.json))
+    case Right(city) if opType == "put" => Created(IDResponse(city.id.get).asJson, `Content-Type`(MediaType.application.json))
+    case Right(city) => Ok(city.asJson, `Content-Type`(MediaType.application.json))
     case Left(UNIQUE_VIOLATION) => Conflict()
+    case Left(CHECK_VIOLATION) => BadRequest()
+    case Left(FOREIGN_KEY_VIOLATION) => BadRequest()
     case Left(_) => BadRequest()
   }
 }

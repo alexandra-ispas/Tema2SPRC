@@ -41,7 +41,6 @@ object HttpServer {
         .lastOrError
     } yield exitCode
 
-  // Wiring
   private def getHttpRoutes(
       xa: Transactor[IO],
   ): Kleisli[IO, Request[IO], Response[IO]] = {
